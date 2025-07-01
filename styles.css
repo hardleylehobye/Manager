@@ -89,3 +89,41 @@ footer {
   color: black;
   flex-shrink: 0; /* Prevent footer from shrinking */
 }
+
+@media (max-width: 768px) {
+  main {
+    flex-direction: column; /* Stack content vertically on small screens */
+    padding: 10px;
+  }
+
+  nav {
+    justify-content: space-around;
+  }
+
+  nav a {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Orientation-based styles */
+@media (orientation: portrait) {
+  body {
+    background-color: #f9f9f9; /* Light background in portrait */
+  }
+
+  main {
+    flex-direction: column; /* Stack elements vertically */
+  }
+}
+
+@media (orientation: landscape) {
+  body {
+    background-color: #e0f7fa; /* Slightly different bg for landscape */
+  }
+
+  main {
+    flex-direction: row; /* Arrange main content horizontally */
+    padding: 0 40px;
+  }
+}
