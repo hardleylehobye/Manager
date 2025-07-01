@@ -4,7 +4,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyAm1bjnb-mRQFZaBrS5qMqcG-kBr2jWlSU",
+  apiKey: process.env.FIREBASE_API_KEY,
   authDomain: "manager-33ab0.firebaseapp.com",
   projectId: "manager-33ab0",
   storageBucket: "manager-33ab0.appspot.com",
