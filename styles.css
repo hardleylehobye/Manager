@@ -1,0 +1,91 @@
+/* styles.css */
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+  color: #000000; /* Black text color */
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Full height of the viewport */
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #afbbbc; /* Dark background */
+  color: black;
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.logo {
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+nav {
+  display: flex;
+  flex-grow: 1;
+  justify-content: center;
+  
+}
+
+nav a {
+  color: #f0f0f0; /* Light grey for nav links */
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 10px;
+  transition: background-color 0.3s ease;
+ 
+}
+
+nav a:hover {
+  background-color: #444444; /* Slight hover effect */
+  border-radius: 25px;
+}
+
+.auth-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#google-signin {
+  padding: 10px 20px;
+  background-color: #007BFF; /* Blue button */
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+#google-signin:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+
+
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1; /* Take up the remaining space */
+  padding: 0 20px;
+  text-align: center;
+}
+
+footer {
+  text-align: center;
+  padding: 10px;
+  background-color: #afbbbc;
+  color: black;
+  flex-shrink: 0; /* Prevent footer from shrinking */
+}
