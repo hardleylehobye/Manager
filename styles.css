@@ -18,6 +18,7 @@ header {
   background-color: #afbbbc; /* Dark background */
   color: black;
   flex-shrink: 0; /* Prevent header from shrinking */
+  flex-wrap: nowrap; /* no wrap by default */
 }
 
 .logo {
@@ -30,7 +31,6 @@ nav {
   display: flex;
   flex-grow: 1;
   justify-content: center;
-  
 }
 
 nav a {
@@ -40,7 +40,6 @@ nav a {
   font-weight: 500;
   padding: 10px;
   transition: background-color 0.3s ease;
- 
 }
 
 nav a:hover {
@@ -71,8 +70,6 @@ nav a:hover {
   background-color: #0056b3; /* Darker blue on hover */
 }
 
-
-
 main {
   display: flex;
   justify-content: center;
@@ -90,9 +87,42 @@ footer {
   flex-shrink: 0; /* Prevent footer from shrinking */
 }
 
+/* Responsive header fix for small screens and portrait */
+@media (max-width: 600px), (orientation: portrait) {
+  header {
+    flex-wrap: wrap; /* Allow wrapping */
+    justify-content: center; /* Center items */
+    gap: 10px; /* Space between wrapped items */
+  }
+
+  .logo {
+    flex-basis: 100%; /* Full width */
+    text-align: center;
+    font-size: 1.2rem;
+  }
+
+  nav {
+    flex-basis: 100%; /* Full width */
+    justify-content: center;
+    order: 2; /* Below logo */
+  }
+
+  .auth-container {
+    flex-basis: 100%; /* Full width */
+    justify-content: center;
+    order: 3; /* Below nav */
+  }
+
+  nav a {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Main content stack on smaller screens */
 @media (max-width: 768px) {
   main {
-    flex-direction: column; /* Stack content vertically on small screens */
+    flex-direction: column; /* Stack content vertically */
     padding: 10px;
   }
 
