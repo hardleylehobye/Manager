@@ -46,10 +46,10 @@ function App() {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #00f0ff 0%, #ff7e5f 100%)",
+        background: "linear-gradient(135deg, #f5f5f5 0%, #d6d1cc 60%, #f9a162 100%)",
         display: "flex",
         flexDirection: "column",
-        color: "#fff",
+        color: "#000", // black text
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       }}
     >
@@ -68,18 +68,18 @@ function App() {
             <button
               onClick={handleGoogleSignIn}
               style={{
-                backgroundColor: "#fff",
-                color: "#00f0ff",
+                backgroundColor: "#f9a162", // soft orange
+                color: "#000",
                 border: "none",
                 padding: "12px 30px",
                 fontSize: "1.2rem",
                 borderRadius: "30px",
                 cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(0, 240, 255, 0.5)",
+                boxShadow: "0 4px 15px rgba(249, 161, 98, 0.5)",
                 transition: "background-color 0.3s ease",
               }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e0ffff")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#fff")}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e58b29")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#f9a162")}
             >
               Sign in with Google
             </button>
@@ -91,12 +91,13 @@ function App() {
           <div
             style={{
               width: "220px",
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              backgroundColor: "rgba(214, 209, 204, 0.6)", // semi-transparent warm grey
               padding: "20px",
               display: "flex",
               flexDirection: "column",
               gap: "15px",
-              borderRight: "1px solid rgba(255,255,255,0.2)",
+              borderRight: "1px solid rgba(0,0,0,0.1)",
+              color: "#000",
             }}
           >
             <p style={{ fontSize: "1.1rem", fontWeight: "bold" }}>
@@ -104,27 +105,33 @@ function App() {
             </p>
             <button
               style={{
-                backgroundColor: "#fff",
-                color: "#ff7e5f",
+                backgroundColor: "#f9a162",
+                color: "#000",
                 border: "none",
                 padding: "10px",
                 borderRadius: "20px",
                 cursor: "pointer",
+                transition: "background-color 0.3s ease",
               }}
               onClick={() => alert("Planner feature coming soon!")}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e58b29")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#f9a162")}
             >
               Planner
             </button>
             <button
               style={{
-                backgroundColor: "#fff",
-                color: "#ff7e5f",
+                backgroundColor: "#f9a162",
+                color: "#000",
                 border: "none",
                 padding: "10px",
                 borderRadius: "20px",
                 cursor: "pointer",
+                transition: "background-color 0.3s ease",
               }}
               onClick={() => alert("Business Finances coming soon!")}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e58b29")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#f9a162")}
             >
               Business Finances
             </button>
@@ -132,13 +139,16 @@ function App() {
               onClick={handleSignOut}
               style={{
                 marginTop: "auto",
-                backgroundColor: "#fff",
-                color: "#ff7e5f",
+                backgroundColor: "#f9a162",
+                color: "#000",
                 border: "none",
                 padding: "10px",
                 borderRadius: "20px",
                 cursor: "pointer",
+                transition: "background-color 0.3s ease",
               }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e58b29")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#f9a162")}
             >
               Sign Out
             </button>
@@ -153,6 +163,7 @@ function App() {
               alignItems: "center",
               fontSize: "1.5rem",
               padding: "20px",
+              color: "#000",
             }}
           >
             Weekly Planner (Coming Soon!)
