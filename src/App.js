@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect } from "react";
 import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -11,6 +10,7 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log("Current user:", currentUser);
       setUser(currentUser);
       setLoading(false);
     });
@@ -19,6 +19,7 @@ function App() {
 
   if (loading) return <p>Loading...</p>;
 
+  console.log("Rendering:", user ? "Home" : "Login");
   return user ? <Home user={user} /> : <Login />;
 }
 

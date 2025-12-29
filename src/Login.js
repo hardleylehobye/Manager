@@ -1,4 +1,3 @@
-// src/Login.js
 import React from "react";
 import { auth, googleProvider } from "./firebase";
 import { signInWithPopup } from "firebase/auth";
@@ -6,9 +5,19 @@ import { signInWithPopup } from "firebase/auth";
 function Login() {
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Login successful:", result.user);
     } catch (error) {
-      console.error("Error signing in:", error);
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
+      
+      // Ignore cancelled popup
+      if (error.code === 'auth/cancelled-popup-request' || 
+          error.code === 'auth/popup-closed-by-user') {
+        return;
+      }
+      
+      alert('Sign in failed: ' + error.message);
     }
   };
 

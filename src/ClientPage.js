@@ -1,301 +1,475 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { v4 as uuidv4 } from "uuid";
+import { doc, setDoc } from "firebase/firestore";
 
-function ClientPage({ instance: initialInstance, user }) {
-  const [instance, setInstance] = useState(initialInstance || {});
-  const [clients, setClients] = useState(initialInstance?.clients || []);
-  const [payments, setPayments] = useState(initialInstance?.payments || []);
-  const [newClient, setNewClient] = useState({ name: "", email: "", recurring: true });
-  const [selectedClients, setSelectedClients] = useState([]);
-  const [newColumn, setNewColumn] = useState("");
-  const [search, setSearch] = useState("");
-  const [paymentInput, setPaymentInput] = useState({});
+function ClientPage({ instance, user, instances, setInstances, selectedIndex }) {
+  const [activeTab, setActiveTab] = useState("description");
+  
+  // Description states
+  const [description, setDescription] = useState(instance.description || "");
+  const [research, setResearch] = useState(instance.research || "");
+  const [implementation, setImplementation] = useState(instance.implementation || "");
+  const [descriptionChanged, setDescriptionChanged] = useState(false);
+  
+  // Clients states
+  const [clients, setClients] = useState(instance.clients || []);
+  const [showClientForm, setShowClientForm] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    notes: ""
+  });
 
-  const saveInstance = async (updatedData) => {
-    if (!user?.uid || !instance?.id) return;
-    try {
-      const docRef = doc(db, "users", user.uid, "instances", instance.id);
-      const newInstance = { ...instance, ...updatedData };
-      await setDoc(docRef, newInstance, { merge: true });
-      setInstance(newInstance);
-    } catch (err) {
-      console.error("Failed to save instance:", err);
+  const saveToFirestore = async (updatedInstance) => {
+    const updatedInstances = [...instances];
+    updatedInstances[selectedIndex] = updatedInstance;
+    setInstances(updatedInstances);
+    
+    if (user) {
+      await setDoc(doc(db, "users", user.uid), { instances: updatedInstances }, { merge: true });
     }
   };
 
-  // Effect to handle loading an existing instance or creating a new one
-  useEffect(() => {
-    const loadAndSetInstance = async () => {
-      if (!user?.uid) return;
+  const handleSaveDescription = async () => {
+    const updated = { 
+      ...instance, 
+      description, 
+      research, 
+      implementation 
+    };
+    await saveToFirestore(updated);
+    setDescriptionChanged(false);
+    alert("Description saved successfully!");
+  };
 
-      // 1. If an initial instance ID is provided, try to load that instance from Firestore.
-      if (initialInstance?.id) {
-        try {
-          const docRef = doc(db, "users", user.uid, "instances", initialInstance.id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setInstance(data);
-            setClients(data.clients || []);
-            setPayments(data.payments || []);
-          } else {
-            console.warn("Instance not found in Firestore. Creating a new one.");
-            // If the instance doesn't exist, save the initial state.
-            await saveInstance({ ...initialInstance, id: initialInstance.id });
-          }
-        } catch (err) {
-          console.error("Failed to load instance:", err);
-        }
-      } 
-      // 2. If no ID is provided, it's a new instance. Generate a new ID and save it.
-      else {
-        const id = uuidv4();
-        const newInstance = { ...initialInstance, id };
-        setInstance(newInstance);
-        await saveInstance(newInstance);
+  const handleDescriptionChange = (field, value) => {
+    setDescriptionChanged(true);
+    if (field === "description") setDescription(value);
+    if (field === "research") setResearch(value);
+    if (field === "implementation") setImplementation(value);
+  };
+
+  const handleAddClient = async () => {
+    if (!newClient.name.trim()) {
+      alert("Please enter a client name");
+      return;
+    }
+
+    const client = {
+      id: Date.now().toString(),
+      ...newClient,
+      createdAt: new Date().toISOString(),
+      finances: {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        invoices: [],
+        payments: []
       }
     };
 
-    loadAndSetInstance();
-  }, [user?.uid, initialInstance?.id, saveInstance, initialInstance]);
-
-  // Add new client
-  const addClient = async () => {
-    if (!newClient.name.trim()) return;
-    const client = { id: uuidv4(), ...newClient, details: {} };
     const updatedClients = [...clients, client];
     setClients(updatedClients);
-    setNewClient({ name: "", email: "", recurring: true });
-    await saveInstance({ clients: updatedClients });
+    const updated = { ...instance, clients: updatedClients };
+    await saveToFirestore(updated);
+    
+    setNewClient({ name: "", email: "", phone: "", company: "", notes: "" });
+    setShowClientForm(false);
+    alert("Client added successfully!");
   };
 
-  // Remove selected clients
-  const removeSelectedClients = async () => {
-    if (selectedClients.length === 0) return;
-    const updatedClients = clients.filter((c) => !selectedClients.includes(c.id));
-    setClients(updatedClients);
-    setSelectedClients([]);
-    await saveInstance({ clients: updatedClients });
+  const handleRemoveClient = async (clientId) => {
+    if (window.confirm("Remove this client?")) {
+      const updatedClients = clients.filter(c => c.id !== clientId);
+      setClients(updatedClients);
+      const updated = { ...instance, clients: updatedClients };
+      await saveToFirestore(updated);
+      alert("Client removed successfully!");
+    }
   };
 
-  const toggleSelect = (clientId) => {
-    setSelectedClients((prev) =>
-      prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]
-    );
-  };
-
-  // Add payment
-  const addPayment = async (clientId) => {
-    const amount = Number(paymentInput[clientId]);
-    if (!amount) return;
-    const month = new Date().toISOString().slice(0, 7);
-    const payment = { clientId, amount, month, date: new Date().toISOString() };
-    const updatedPayments = [...payments, payment];
-    setPayments(updatedPayments);
-    setPaymentInput({ ...paymentInput, [clientId]: "" });
-    await saveInstance({ payments: updatedPayments });
-  };
-
-  // Add column
-  const addColumn = (columnName) => {
-    if (!columnName.trim()) return;
-    const updatedClients = clients.map((c) => ({
-      ...c,
-      details: { ...c.details, [columnName]: "" },
-    }));
-    setClients(updatedClients);
-    setNewColumn("");
-    saveInstance({ clients: updatedClients });
-  };
-
-  // Update column detail
-  const updateDetail = (clientId, column, value) => {
-    const updatedClients = clients.map((c) =>
-      c.id === clientId ? { ...c, details: { ...c.details, [column]: value } } : c
-    );
-    setClients(updatedClients);
-    saveInstance({ clients: updatedClients });
-  };
-
-  const filteredClients = clients.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthlyPayments = payments.filter((p) => p.month === currentMonth);
+  const tabStyle = (tabName) => ({
+    padding: "10px 20px",
+    backgroundColor: activeTab === tabName ? "#f9a162" : "#f0f0f0",
+    color: activeTab === tabName ? "#000" : "#666",
+    border: "none",
+    borderRadius: "20px 20px 0 0",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: activeTab === tabName ? "bold" : "normal",
+  });
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>{instance.name || "New Instance"} (Client-based)</h2>
+    <div>
+      <h2 style={{ marginTop: 0, marginBottom: "20px" }}>{instance.name || "Unnamed Project"}</h2>
 
-      {/* Add Client */}
-      <div style={{ marginTop: "20px" }}>
-        <h3>Add New Client</h3>
-        <input
-          placeholder="Name"
-          value={newClient.name}
-          onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-        />
-        <input
-          placeholder="Email"
-          value={newClient.email}
-          onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-        />
-        <label>
-          <input
-            type="checkbox"
-            checked={newClient.recurring}
-            onChange={(e) => setNewClient({ ...newClient, recurring: e.target.checked })}
-          />
-          Recurring
-        </label>
-        <button onClick={addClient}>Add Client</button>
-      </div>
-
-      {/* Add Column */}
-      <div style={{ marginTop: "10px" }}>
-        <input
-          placeholder="New Column Name"
-          value={newColumn}
-          onChange={(e) => setNewColumn(e.target.value)}
-        />
-        <button onClick={() => addColumn(newColumn)}>Add Column</button>
-      </div>
-
-      {/* Search */}
-      <div style={{ marginTop: "10px" }}>
-        <input
-          placeholder="Search client"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* Action Buttons */}
-      <div style={{ marginTop: "10px" }}>
-        <button
-          onClick={() =>
-            alert(
-              `Emails sent to: ${clients
-                .filter((c) => selectedClients.includes(c.id))
-                .map((c) => c.email)
-                .join(", ")}`
-            )
-          }
-          style={{ marginRight: "10px" }}
-        >
-          Send Email to Selected
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: "5px", marginBottom: "20px", borderBottom: "2px solid #f9a162" }}>
+        <button onClick={() => setActiveTab("description")} style={tabStyle("description")}>
+          Description
         </button>
-        <button onClick={removeSelectedClients} disabled={selectedClients.length === 0}>
-          Remove Selected
+        <button onClick={() => setActiveTab("business")} style={tabStyle("business")}>
+          Run Business ({clients.length} clients)
         </button>
       </div>
 
-      {/* Clients List */}
-      <div
-        style={{
-          marginTop: "20px",
-          maxHeight: "300px",
-          overflowY: "auto",
-          border: "1px solid #ccc",
-          padding: "10px",
-          borderRadius: "10px",
-        }}
-      >
-        <h3>Clients List</h3>
-        <ul>
-          {filteredClients.map((c) => (
-            <li key={c.id} style={{ marginBottom: "10px" }}>
-              <input
-                type="checkbox"
-                checked={selectedClients.includes(c.id)}
-                onChange={() => toggleSelect(c.id)}
-                style={{ marginRight: "5px" }}
-              />
-              <strong>{c.name}</strong> ({c.recurring ? "Recurring" : "One-time"})
+      {/* Description Tab */}
+      {activeTab === "description" && (
+        <div>
+          <div style={{ marginBottom: "30px" }}>
+            <h3 style={{ marginBottom: "10px" }}>Project Description</h3>
+            <textarea
+              value={description}
+              onChange={(e) => handleDescriptionChange("description", e.target.value)}
+              placeholder="Describe your project..."
+              style={{
+                width: "100%",
+                minHeight: "100px",
+                padding: "10px",
+                border: "1px solid #ccc",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontFamily: "inherit",
+                resize: "vertical",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
 
-              {Object.keys(c.details).map((col) => (
-                <input
-                  key={col}
-                  placeholder={col}
-                  value={c.details[col]}
-                  onChange={(e) => updateDetail(c.id, col, e.target.value)}
-                  style={{ marginLeft: "5px" }}
-                />
-              ))}
+          <div style={{ marginBottom: "30px" }}>
+            <h3 style={{ marginBottom: "10px" }}>Research</h3>
+            <textarea
+              value={research}
+              onChange={(e) => handleDescriptionChange("research", e.target.value)}
+              placeholder="Research notes, market analysis, competitor research..."
+              style={{
+                width: "100%",
+                minHeight: "150px",
+                padding: "10px",
+                border: "1px solid #ccc",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontFamily: "inherit",
+                resize: "vertical",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
 
-              <input
-                type="number"
-                placeholder="Amount"
-                value={paymentInput[c.id] || ""}
-                style={{ width: "80px", marginLeft: "5px" }}
-                onChange={(e) => setPaymentInput({ ...paymentInput, [c.id]: e.target.value })}
-              />
-              <button onClick={() => addPayment(c.id)} style={{ marginLeft: "5px" }}>
-                Add Payment
+          <div style={{ marginBottom: "30px" }}>
+            <h3 style={{ marginBottom: "10px" }}>Implementation</h3>
+            <textarea
+              value={implementation}
+              onChange={(e) => handleDescriptionChange("implementation", e.target.value)}
+              placeholder="Implementation plan, milestones, tasks..."
+              style={{
+                width: "100%",
+                minHeight: "150px",
+                padding: "10px",
+                border: "1px solid #ccc",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontFamily: "inherit",
+                resize: "vertical",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleSaveDescription}
+            disabled={!descriptionChanged}
+            style={{
+              width: "100%",
+              padding: "12px",
+              backgroundColor: descriptionChanged ? "#28a745" : "#ccc",
+              color: "white",
+              border: "none",
+              borderRadius: "10px",
+              cursor: descriptionChanged ? "pointer" : "not-allowed",
+              fontSize: "16px",
+              fontWeight: "bold",
+            }}
+          >
+            {descriptionChanged ? "💾 Save Changes" : "✓ Saved"}
+          </button>
+        </div>
+      )}
+
+      {/* Run Business Tab */}
+      {activeTab === "business" && (
+        <div>
+          {/* Clients Section */}
+          <div style={{ marginBottom: "40px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h3 style={{ margin: 0 }}>Clients</h3>
+              <button
+                onClick={() => setShowClientForm(!showClientForm)}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#f9a162",
+                  color: "#000",
+                  border: "none",
+                  borderRadius: "20px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                {showClientForm ? "Cancel" : "+ Add Client"}
               </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+            </div>
 
-      {/* Invoice */}
-      <div style={{ marginTop: "20px" }}>
-        <h3>Invoice for {currentMonth}</h3>
-        {monthlyPayments.length === 0 ? (
-          <p>No payments yet this month</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
-            <thead>
-              <tr>
-                <th style={{ border: "1px solid #ccc", padding: "5px" }}>Client</th>
-                {Object.keys(clients[0]?.details || {}).map((col) => (
-                  <th key={col} style={{ border: "1px solid #ccc", padding: "5px" }}>
-                    {col}
-                  </th>
-                ))}
-                <th style={{ border: "1px solid #ccc", padding: "5px" }}>Amount</th>
-                <th style={{ border: "1px solid #ccc", padding: "5px" }}>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monthlyPayments.map((p, i) => {
-                const client = clients.find((c) => c.id === p.clientId);
-                return (
-                  <tr key={i}>
-                    <td style={{ border: "1px solid #ccc", padding: "5px" }}>{client?.name}</td>
-                    {Object.keys(client?.details || {}).map((col) => (
-                      <td key={col} style={{ border: "1px solid #ccc", padding: "5px" }}>
-                        {client?.details[col] || "-"}
-                      </td>
-                    ))}
-                    <td style={{ border: "1px solid #ccc", padding: "5px", textAlign: "right" }}>
-                      {p.amount}
-                    </td>
-                    <td style={{ border: "1px solid #ccc", padding: "5px", textAlign: "center" }}>
-                      {new Date(p.date).toLocaleDateString()}
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr style={{ fontWeight: "bold", background: "#f9f9f9" }}>
-                <td
-                  colSpan={Object.keys(clients[0]?.details || {}).length + 1}
-                  style={{ border: "1px solid #ccc", padding: "5px", textAlign: "right" }}
+            {showClientForm && (
+              <div style={{ 
+                padding: "20px", 
+                backgroundColor: "#f8f9fa", 
+                borderRadius: "10px", 
+                marginBottom: "20px",
+                border: "1px solid #dee2e6",
+              }}>
+                <input
+                  type="text"
+                  value={newClient.name}
+                  onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                  placeholder="Client name *"
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    border: "1px solid #ccc",
+                    borderRadius: "10px",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <input
+                  type="text"
+                  value={newClient.company}
+                  onChange={(e) => setNewClient({ ...newClient, company: e.target.value })}
+                  placeholder="Company"
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    border: "1px solid #ccc",
+                    borderRadius: "10px",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <input
+                  type="email"
+                  value={newClient.email}
+                  onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                  placeholder="Email"
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    border: "1px solid #ccc",
+                    borderRadius: "10px",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <input
+                  type="tel"
+                  value={newClient.phone}
+                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                  placeholder="Phone"
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    border: "1px solid #ccc",
+                    borderRadius: "10px",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <textarea
+                  value={newClient.notes}
+                  onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
+                  placeholder="Notes"
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    border: "1px solid #ccc",
+                    borderRadius: "10px",
+                    boxSizing: "border-box",
+                    minHeight: "80px",
+                    resize: "vertical",
+                  }}
+                />
+                <button
+                  onClick={handleAddClient}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    backgroundColor: "#28a745",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
                 >
-                  Total
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "5px", textAlign: "right" }}>
-                  {monthlyPayments.reduce((sum, p) => sum + p.amount, 0)}
-                </td>
-                <td style={{ border: "1px solid #ccc" }}></td>
-              </tr>
-            </tbody>
-          </table>
-        )}
-      </div>
+                  Add Client
+                </button>
+              </div>
+            )}
+
+            <div>
+              {clients.length === 0 ? (
+                <p style={{ color: "#666", fontSize: "14px", textAlign: "center", padding: "40px", backgroundColor: "#f8f9fa", borderRadius: "10px" }}>
+                  No clients yet. Add your first client to start running your business!
+                </p>
+              ) : (
+                clients.map((client) => (
+                  <div
+                    key={client.id}
+                    style={{
+                      padding: "20px",
+                      marginBottom: "15px",
+                      backgroundColor: "#fff",
+                      border: "1px solid #dee2e6",
+                      borderRadius: "10px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: "bold", fontSize: "18px", marginBottom: "8px" }}>
+                          {client.name}
+                        </div>
+                        {client.company && (
+                          <div style={{ fontSize: "14px", color: "#666", marginBottom: "8px" }}>
+                            🏢 {client.company}
+                          </div>
+                        )}
+                        {client.email && (
+                          <div style={{ fontSize: "14px", color: "#555", marginBottom: "4px" }}>
+                            📧 {client.email}
+                          </div>
+                        )}
+                        {client.phone && (
+                          <div style={{ fontSize: "14px", color: "#555", marginBottom: "4px" }}>
+                            📞 {client.phone}
+                          </div>
+                        )}
+                        {client.notes && (
+                          <div style={{ fontSize: "13px", color: "#777", marginTop: "10px", fontStyle: "italic" }}>
+                            💭 {client.notes}
+                          </div>
+                        )}
+                        
+                        {/* Client Finances Preview */}
+                        <div style={{ 
+                          marginTop: "15px", 
+                          padding: "10px", 
+                          backgroundColor: "#f0f8ff", 
+                          borderRadius: "8px",
+                          display: "flex",
+                          gap: "20px"
+                        }}>
+                          <div>
+                            <div style={{ fontSize: "12px", color: "#666" }}>Revenue</div>
+                            <div style={{ fontSize: "16px", fontWeight: "bold", color: "#28a745" }}>
+                              ${client.finances?.totalRevenue || 0}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: "12px", color: "#666" }}>Expenses</div>
+                            <div style={{ fontSize: "16px", fontWeight: "bold", color: "#e74c3c" }}>
+                              ${client.finances?.totalExpenses || 0}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: "12px", color: "#666" }}>Net</div>
+                            <div style={{ fontSize: "16px", fontWeight: "bold", color: "#007bff" }}>
+                              ${(client.finances?.totalRevenue || 0) - (client.finances?.totalExpenses || 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveClient(client.id)}
+                        style={{
+                          padding: "8px 16px",
+                          backgroundColor: "#e74c3c",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "10px",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Financial Features Section */}
+          <div>
+            <h3 style={{ marginBottom: "15px" }}>Financial Tools</h3>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+              gap: "15px",
+            }}>
+              <div style={{ 
+                padding: "20px", 
+                backgroundColor: "#f8f9fa", 
+                borderRadius: "10px",
+                border: "1px solid #dee2e6",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "32px", marginBottom: "10px" }}>💰</div>
+                <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Invoices</div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Create & track invoices</div>
+              </div>
+              
+              <div style={{ 
+                padding: "20px", 
+                backgroundColor: "#f8f9fa", 
+                borderRadius: "10px",
+                border: "1px solid #dee2e6",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "32px", marginBottom: "10px" }}>💳</div>
+                <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Payments</div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Record payments received</div>
+              </div>
+              
+              <div style={{ 
+                padding: "20px", 
+                backgroundColor: "#f8f9fa", 
+                borderRadius: "10px",
+                border: "1px solid #dee2e6",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "32px", marginBottom: "10px" }}>📊</div>
+                <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Reports</div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Financial analytics</div>
+              </div>
+              
+              <div style={{ 
+                padding: "20px", 
+                backgroundColor: "#f8f9fa", 
+                borderRadius: "10px",
+                border: "1px solid #dee2e6",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "32px", marginBottom: "10px" }}>📈</div>
+                <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Expenses</div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Track business expenses</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
